@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📸 Public Foto Gallery</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 15px;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-error {
+            background: #ffe0e0;
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
+
+        .alert-success {
+            background: #e8f8f0;
+            color: #51cf66;
+            border: 1px solid #51cf66;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #2196f3;
+            border: 1px solid #2196f3;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f9f9f9;
+        }
+
+        .upload-area:hover {
+            background: #f0f0f0;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragging {
+            background: #e8e8ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area-text {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-area h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .upload-area p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-filter {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-filter.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-filter:hover {
+            transform: translateY(-2px);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+        }
+
+        .media-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .media-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+            cursor: pointer;
+            background: #f0f0f0;
+        }
+
+        .media-info {
+            padding: 10px;
+            background: white;
+        }
+
+        .media-name {
+            font-size: 12px;
+            color: #333;
+            margin-bottom: 5px;
+            word-break: break-word;
+            font-weight: 600;
+        }
+
+        .media-meta {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .media-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .btn-download {
+            background: #51cf66;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #37b24d;
+        }
+
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-delete:hover:not(:disabled) {
+            background: #ff5252;
+        }
+
+        .btn-delete:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .empty h2 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .empty p {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            position: relative;
+        }
+
+        .modal-media {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+            border-radius: 10px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📸 Public Foto Gallery</h1>
+            <p>Upload & share foto/video dengan semua orang!</p>
+        </div>
+
+        <div class="upload-section">
+            <div id="alertError" class="alert alert-error"></div>
+            <div id="alertSuccess" class="alert alert-success"></div>
+            <div id="alertInfo" class="alert alert-info"></div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-area-text">📤</div>
+                <h3>Upload Foto atau Video</h3>
+                <p>Drag & drop atau klik untuk memilih</p>
+                <input type="file" id="fileInput" accept="image/*,video/*" multiple>
+            </div>
+
+            <div class="controls">
+                <input 
+                    type="text" 
+                    id="searchBox" 
+                    class="search-box" 
+                    placeholder="🔍 Cari..."
+                >
+                <button class="btn btn-filter active" onclick="setFilter('all')">Semua</button>
+                <button class="btn btn-filter" onclick="setFilter('image')">📸 Foto</button>
+                <button class="btn btn-filter" onclick="setFilter('video')">🎥 Video</button>
+            </div>
+
+            <div class="stats">
+                <span id="statsText">Loading...</span>
+            </div>
+        </div>
+
+        <div id="galleryContainer"></div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <img id="modalMedia" class="modal-media">
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIG =====
+        const SUPABASE_URL = 'https://rpddhnqytftypugowmdv.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_uTlGRJ0nfPC5Thaa73JAlg_pbzQeIKh';
+        const BUCKET = 'gallery';
+
+        // ===== STATE =====
+        let supabase = null;
+        let userId = localStorage.getItem('userId') || 'user_' + Date.now();
+        let allMedia = [];
+        let currentFilter = 'all';
+        let searchTerm = '';
+
+        // ===== INIT =====
+        async function init() {
+            try {
+                console.log('Initializing Supabase...');
+                const { createClient } = window.supabase;
+                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+                localStorage.setItem('userId', userId);
+                
+                showAlert('info', 'Gallery loaded! Siap untuk upload.');
+                loadMedia();
+                setupListeners();
+            } catch (error) {
+                showAlert('error', `Init error: ${error.message}`);
+                console.error(error);
+            }
+        }
+
+        // ===== LISTENERS =====
+        function setupListeners() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragging');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragging');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragging');
+                handleFiles(Array.from(e.dataTransfer.files));
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(Array.from(e.target.files));
+                e.target.value = '';
+            });
+
+            document.getElementById('searchBox').addEventListener('input', (e) => {
+                searchTerm = e.target.value;
+                renderGallery();
+            });
+        }
+
+        // ===== HANDLE FILES =====
+        async function handleFiles(files) {
+            if (!supabase) {
+                showAlert('error', 'Supabase tidak terkoneksi!');
+                return;
+            }
+
+            for (const file of files) {
+                if (file.size > 100 * 1024 * 1024) {
+                    showAlert('error', `${file.name} terlalu besar (max 100MB)`);
+                    continue;
+                }
+
+                await uploadFile(file);
+            }
+        }
+
+        // ===== UPLOAD FILE =====
+        async function uploadFile(file) {
+            try {
+                const fileName = `${userId}/${Date.now()}_${file.name}`;
+                
+                console.log('Uploading:', fileName);
+                const { data, error } = await supabase.storage
+                    .from(BUCKET)
+                    .upload(fileName, file);
+
+                if (error) throw error;
+
+                showAlert('success', `✅ ${file.name} berhasil diupload!`);
+                setTimeout(() => loadMedia(), 500);
+            } catch (error) {
+                console.error('Upload error:', error);
+                showAlert('error', `Upload gagal: ${error.message}`);
+            }
+        }
+
+        // ===== LOAD MEDIA =====
+        async function loadMedia() {
+            try {
+                const container = document.getElementById('galleryContainer');
+                container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading...</p></div>';
+
+                const { data, error } = await supabase.storage
+                    .from(BUCKET)
+                    .list('', { limit: 500 });
+
+                if (error) throw error;
+
+                allMedia = [];
+
+                for (const file of data) {
+                    if (file.name === '.emptyFolderPlaceholder') continue;
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from(BUCKET)
+                        .getPublicUrl(file.name);
+
+                    const isVideo = /\.(mp4|webm|mov|avi|mkv)$/i.test(file.name);
+
+                    allMedia.push({
+                        id: file.id,
+                        name: file.name.split('/').pop(),
+                        path: file.name,
+                        url: publicUrl,
+                        size: (file.metadata.size / 1024 / 1024).toFixed(2),
+                        date: new Date(file.created_at).toLocaleDateString('id-ID'),
+                        type: isVideo ? 'video' : 'image',
+                        userId: file.name.split('/')[0]
+                    });
+                }
+
+                renderGallery();
+            } catch (error) {
+                console.error('Load error:', error);
+                showAlert('error', `Load gagal: ${error.message}`);
+            }
+        }
+
+        // ===== RENDER GALLERY =====
+        function renderGallery() {
+            let filtered = allMedia;
+
+            if (currentFilter === 'image') {
+                filtered = filtered.filter(m => m.type === 'image');
+            } else if (currentFilter === 'video') {
+                filtered = filtered.filter(m => m.type === 'video');
+            }
+
+            if (searchTerm) {
+                filtered = filtered.filter(m => 
+                    m.name.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+
+            const container = document.getElementById('galleryContainer');
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">📸</div>
+                        <h2>Tidak ada media</h2>
+                        <p>Upload foto/video untuk memulai!</p>
+                    </div>
+                `;
+                updateStats();
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="gallery">
+                    ${filtered.map(media => `
+                        <div class="media-card">
+                            ${media.type === 'image'
+                                ? `<img src="${media.url}" alt="${media.name}" class="media-image" onclick="openModal('${media.url}')">`
+                                : `<video src="${media.url}" class="media-image" onclick="openModal('${media.url}')"></video>`
+                            }
+                            <div class="media-info">
+                                <div class="media-name" title="${media.name}">${media.name}</div>
+                                <div class="media-meta">${media.size}MB | ${media.date}</div>
+                                <div class="media-actions">
+                                    <button class="btn-action btn-download" onclick="downloadMedia('${media.url}', '${media.name}')">⬇️</button>
+                                    <button class="btn-action btn-delete" ${media.userId !== userId ? 'disabled' : ''} onclick="deleteMedia('${media.path}')">🗑️</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            updateStats();
+        }
+
+        // ===== FILTER =====
+        function setFilter(type) {
+            currentFilter = type;
+            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            renderGallery();
+        }
+
+        // ===== DOWNLOAD =====
+        function downloadMedia(url, name) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = name;
+            link.click();
+        }
+
+        // ===== DELETE =====
+        async function deleteMedia(path) {
+            if (!confirm('Hapus file ini?')) return;
+
+            try {
+                const { error } = await supabase.storage
+                    .from(BUCKET)
+                    .remove([path]);
+
+                if (error) throw error;
+
+                showAlert('success', 'File berhasil dihapus!');
+                loadMedia();
+            } catch (error) {
+                console.error('Delete error:', error);
+                showAlert('error', `Gagal hapus: ${error.message}`);
+            }
+        }
+
+        // ===== MODAL =====
+        function openModal(url) {
+            document.getElementById('modalMedia').src = url;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        // ===== STATS =====
+        function updateStats() {
+            const total = allMedia.length;
+            const size = allMedia.reduce((sum, m) => sum + parseFloat(m.size), 0).toFixed(2);
+            document.getElementById('statsText').textContent = `📊 ${total} files | 📦 ${size} MB`;
+        }
+
+        // ===== ALERTS =====
+        function showAlert(type, message) {
+            const el = document.getElementById(`alert${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            el.textContent = message;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        // ===== START =====
+        window.addEventListener('DOMContentLoaded', init);
+        setInterval(loadMedia, 15000); // Refresh every 15s
+    </script>
+</body>
+</html>
