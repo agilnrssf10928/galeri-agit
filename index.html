@@ -18,7 +18,7 @@
 <body>
 
 <div class="container">
-    <h2>📤 Upload Foto / Video (Public)</h2>
+    <h2>📤 Upload Foto / Video (Beneran Public)</h2>
     <div class="upload-box">
         <input type="file" id="fileInput" accept="image/*,video/*">
         <br><button onclick="uploadFile()">Upload</button>
@@ -28,16 +28,33 @@
     <div id="preview"></div>
 </div>
 
+<!-- PENTING: Tambahin SDK Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
 <script>
-    // 🔥 DATA DARI AKUN CLOUDINARY KAMU
+    // 1. KONFIGURASI CLOUDINARY (PUNYA LO)
     const CLOUD_NAME = "mbaqppp"; 
-    const API_KEY = "918864726165963"; // API Key lo udah masuk sini
+    const API_KEY = "918864726165963"; 
     const UPLOAD_PRESET = "ml_default";
 
-    let fileLinks = JSON.parse(localStorage.getItem('publicCloudGallery')) || [];
+    // 2. KONFIGURASI FIREBASE (UDAH GUA ISI PAKAI PUNYA LO)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfbbdixLhdiSGCfsDda27E3bO2zHNzYNw",
+      authDomain: "gallery-e18d2.firebaseapp.com",
+      projectId: "gallery-e18d2",
+      storageBucket: "gallery-e18d2.firebasestorage.app",
+      messagingSenderId: "756788087030",
+      appId: "1:756788087030:web:ea2994ec1f2a555b7004d7"
+    };
+    
+    // Init Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
+    // Load data pas web dibuka
     window.onload = function() {
-        renderGallery();
+        loadGallery();
     };
 
     async function uploadFile() {
@@ -53,7 +70,7 @@
         btn.disabled = true;
 
         try {
-            // Upload ke Cloudinary (Sekarang pake API Key)
+            // A. Upload file ke Cloudinary
             const formData = new FormData();
             formData.append("file", file);
             formData.append("api_key", API_KEY);
@@ -67,15 +84,16 @@
             const data = await res.json();
 
             if (data.secure_url) {
-                const isVideo = file.type.startsWith('video');
-                fileLinks.push({
+                // B. Simpan LINK-nya ke Firebase Database (Supaya semua orang bisa baca)
+                await db.collection('files').add({
                     url: data.secure_url,
-                    type: isVideo ? 'video' : 'image'
+                    type: file.type.startsWith('video') ? 'video' : 'image',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                localStorage.setItem('publicCloudGallery', JSON.stringify(fileLinks));
-                renderGallery();
+
                 input.value = '';
-                alert("✅ Upload berhasil!");
+                alert("✅ Upload berhasil! Sekarang semua orang bisa liat.");
+                loadGallery(); // Refresh tampilan
             } else {
                 alert("Gagal upload: " + (data.error?.message || "Unknown error"));
             }
@@ -87,24 +105,35 @@
         }
     }
 
-    function renderGallery() {
+    async function loadGallery() {
         const container = document.getElementById('preview');
-        container.innerHTML = '';
+        container.innerHTML = '<div class="loading">Loading...</div>';
         
-        if (fileLinks.length === 0) {
-            container.innerHTML = '<div class="empty">Belum ada upload. Ayo upload sekarang!</div>';
-            return;
-        }
+        try {
+            // Ambil data dari Firebase, urutin dari yang paling baru
+            const snapshot = await db.collection('files')
+                .orderBy('timestamp', 'desc')
+                .get();
 
-        fileLinks.forEach((item) => {
-            const div = document.createElement('div');
-            if (item.type === 'video') {
-                div.innerHTML = `<video src="${item.url}" controls></video>`;
-            } else {
-                div.innerHTML = `<img src="${item.url}">`;
+            if (snapshot.empty) {
+                container.innerHTML = '<div class="empty">Belum ada upload. Ayo upload sekarang!</div>';
+                return;
             }
-            container.appendChild(div);
-        });
+
+            container.innerHTML = '';
+            snapshot.forEach((doc) => {
+                const item = doc.data();
+                const div = document.createElement('div');
+                if (item.type === 'video') {
+                    div.innerHTML = `<video src="${item.url}" controls></video>`;
+                } else {
+                    div.innerHTML = `<img src="${item.url}">`;
+                }
+                container.appendChild(div);
+            });
+        } catch (e) {
+            container.innerHTML = '<div class="empty">Error loading data: ' + e.message + '</div>';
+        }
     }
 </script>
 </body>
