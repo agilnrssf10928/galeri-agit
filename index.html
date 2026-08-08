@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Foto Gallery - Simpan & Kelola Foto Kamu">
+    <meta name="theme-color" content="#667eea">
+    <title>📸 Foto Gallery - Simpen Foto Kamu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 15px;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            animation: slideUp 0.4s ease 0.1s both;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upload-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-input-label:active {
+            transform: translateY(0);
+        }
+
+        .clear-all-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .clear-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .clear-all-btn:active {
+            transform: translateY(0);
+        }
+
+        .stats {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 15px;
+            }
+        }
+
+        .photo-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .photo-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .photo-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            background: #f0f0f0;
+        }
+
+        .photo-info {
+            padding: 15px;
+            background: white;
+        }
+
+        .photo-date {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+
+        .photo-size {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .photo-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .delete-btn {
+            flex: 1;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+
+        .download-btn {
+            flex: 1;
+            background: #51cf66;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .download-btn:hover {
+            background: #37b24d;
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 30px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.4s ease;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #999;
+            font-size: 15px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-confirm {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+
+        .modal-btn-cancel {
+            background: #eee;
+            color: #333;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #ddd;
+            transform: scale(1.05);
+        }
+
+        .error-msg {
+            background: #ffe0e0;
+            color: #ff6b6b;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📸 Foto Gallery</h1>
+            <p>Simpan & kelola foto kamu dengan mudah</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-container">
+                <div class="file-input-wrapper">
+                    <input 
+                        type="file" 
+                        id="photoInput" 
+                        accept="image/*"
+                        multiple
+                    >
+                    <label for="photoInput" class="file-input-label">
+                        ➕ Upload Foto
+                    </label>
+                </div>
+                <button class="clear-all-btn" onclick="clearAllPhotos()">🗑️ Hapus Semua</button>
+            </div>
+            <div class="error-msg" id="errorMsg"></div>
+            <div class="stats">
+                Total foto: <strong id="photoCount">0</strong> | Storage: <strong id="storageUsed">0 KB</strong>
+            </div>
+        </div>
+
+        <div id="galleryContainer"></div>
+    </div>
+
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <h2>Konfirmasi</h2>
+            <p id="confirmText"></p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-confirm" onclick="confirmDelete()">Hapus</button>
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'photoGallery';
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        let deleteTargetId = null;
+
+        // Load photos saat halaman dibuka
+        function loadPhotos() {
+            const photos = getPhotos();
+            renderGallery(photos);
+            updateStats();
+        }
+
+        // Ambil semua foto dari localStorage
+        function getPhotos() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        // Simpan foto ke localStorage
+        function savePhotos(photos) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
+            updateStats();
+        }
+
+        // Handle upload foto
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.classList.remove('show');
+
+            if (files.length === 0) return;
+
+            const photos = getPhotos();
+
+            files.forEach(file => {
+                if (file.size > MAX_FILE_SIZE) {
+                    showError(`${file.name} terlalu besar! Max 5MB`);
+                    return;
+                }
+
+                if (!file.type.startsWith('image/')) {
+                    showError(`${file.name} bukan gambar!`);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photos.push({
+                        id: Date.now() + Math.random(),
+                        src: e.target.result,
+                        name: file.name,
+                        size: (file.size / 1024).toFixed(2),
+                        date: new Date().toLocaleDateString('id-ID', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })
+                    });
+                    savePhotos(photos);
+                    renderGallery(photos);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Reset input
+            e.target.value = '';
+        });
+
+        // Render gallery
+        function renderGallery(photos) {
+            const container = document.getElementById('galleryContainer');
+
+            if (photos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📸</div>
+                        <h2>Belum ada foto</h2>
+                        <p>Upload foto pertama kamu sekarang!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="gallery">
+                    ${photos.map(photo => `
+                        <div class="photo-card">
+                            <img src="${photo.src}" alt="${photo.name}" class="photo-image" onclick="openModal('${photo.src}')">
+                            <div class="photo-info">
+                                <div class="photo-date">${photo.date}</div>
+                                <div class="photo-size">📦 ${photo.size} KB</div>
+                                <div class="photo-actions">
+                                    <button class="download-btn" onclick="downloadPhoto('${photo.src}', '${photo.name}')">⬇️ Download</button>
+                                    <button class="delete-btn" onclick="showDeleteConfirm('${photo.id}')">🗑️ Hapus</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Download photo
+        function downloadPhoto(src, filename) {
+            const link = document.createElement('a');
+            link.href = src;
+            link.download = filename;
+            link.click();
+        }
+
+        // Show delete confirmation
+        function showDeleteConfirm(id) {
+            deleteTargetId = id;
+            document.getElementById('confirmText').textContent = 'Hapus foto ini? Tidak bisa di-restore.';
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        // Confirm delete
+        function confirmDelete() {
+            if (deleteTargetId) {
+                let photos = getPhotos();
+                photos = photos.filter(p => p.id != deleteTargetId);
+                savePhotos(photos);
+                renderGallery(photos);
+                closeModal();
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+            deleteTargetId = null;
+        }
+
+        // Clear all photos
+        function clearAllPhotos() {
+            deleteTargetId = 'all';
+            document.getElementById('confirmText').textContent = 'Hapus SEMUA foto? Tidak bisa di-restore!';
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        // Override confirmDelete untuk handle clear all
+        const originalConfirmDelete = confirmDelete;
+        window.confirmDelete = function() {
+            if (deleteTargetId === 'all') {
+                localStorage.removeItem(STORAGE_KEY);
+                renderGallery([]);
+                closeModal();
+            } else {
+                originalConfirmDelete();
+            }
+        };
+
+        // Update stats
+        function updateStats() {
+            const photos = getPhotos();
+            document.getElementById('photoCount').textContent = photos.length;
+            
+            let totalSize = 0;
+            photos.forEach(p => totalSize += parseFloat(p.size));
+            
+            if (totalSize > 1024) {
+                document.getElementById('storageUsed').textContent = (totalSize / 1024).toFixed(2) + ' MB';
+            } else {
+                document.getElementById('storageUsed').textContent = totalSize.toFixed(2) + ' KB';
+            }
+        }
+
+        // Show error message
+        function showError(msg) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = '❌ ' + msg;
+            errorMsg.classList.add('show');
+            setTimeout(() => errorMsg.classList.remove('show'), 4000);
+        }
+
+        // Modal close on background click
+        document.getElementById('confirmModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Load photos saat halaman dibuka
+        window.addEventListener('DOMContentLoaded', loadPhotos);
+    </script>
+</body>
+</html>
