@@ -29,11 +29,11 @@
 </div>
 
 <script>
-    // 🔥 CLOUD NAME SUDAH DIISI DENGAN PUNYA KAMU
+    // 🔥 DATA DARI AKUN CLOUDINARY KAMU
     const CLOUD_NAME = "mbaqppp"; 
+    const API_KEY = "918864726165963"; // API Key lo udah masuk sini
     const UPLOAD_PRESET = "ml_default";
 
-    // Data disimpan di LocalStorage (agar orang yang sama bisa liat riwayat uploadnya)
     let fileLinks = JSON.parse(localStorage.getItem('publicCloudGallery')) || [];
 
     window.onload = function() {
@@ -53,9 +53,10 @@
         btn.disabled = true;
 
         try {
-            // Upload ke Cloudinary
+            // Upload ke Cloudinary (Sekarang pake API Key)
             const formData = new FormData();
             formData.append("file", file);
+            formData.append("api_key", API_KEY);
             formData.append("upload_preset", UPLOAD_PRESET);
 
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
@@ -74,7 +75,7 @@
                 localStorage.setItem('publicCloudGallery', JSON.stringify(fileLinks));
                 renderGallery();
                 input.value = '';
-                alert("✅ Upload berhasil! File tersimpan di Cloud.");
+                alert("✅ Upload berhasil!");
             } else {
                 alert("Gagal upload: " + (data.error?.message || "Unknown error"));
             }
