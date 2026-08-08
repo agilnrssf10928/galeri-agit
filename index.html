@@ -1,673 +1,88 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📸 Public Foto Gallery</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0"></script>
+    <title>Public Gallery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 36px;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .upload-section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-        }
-
-        .status {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .status-loading {
-            background: #e3f2fd;
-            color: #2196f3;
-        }
-
-        .status-connected {
-            background: #e8f8f0;
-            color: #51cf66;
-        }
-
-        .status-error {
-            background: #ffe0e0;
-            color: #ff6b6b;
-        }
-
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f9f9f9;
-        }
-
-        .upload-area:hover {
-            background: #f0f0f0;
-            border-color: #764ba2;
-        }
-
-        .upload-area.dragging {
-            background: #e8e8ff;
-            border-color: #764ba2;
-        }
-
-        .upload-area h3 {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .upload-area p {
-            color: #666;
-            font-size: 14px;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .msg {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: none;
-        }
-
-        .msg.show {
-            display: block;
-        }
-
-        .msg-success {
-            background: #e8f8f0;
-            color: #51cf66;
-            border: 1px solid #51cf66;
-        }
-
-        .msg-error {
-            background: #ffe0e0;
-            color: #ff6b6b;
-            border: 1px solid #ff6b6b;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.3s;
-        }
-
-        .btn-filter {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-filter.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-filter:hover {
-            transform: translateY(-2px);
-        }
-
-        .search-box {
-            flex: 1;
-            min-width: 200px;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 25px;
-            font-size: 14px;
-        }
-
-        .search-box:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .stats {
-            text-align: center;
-            color: #666;
-            font-size: 13px;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }
-
-        .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
-        }
-
-        @media (max-width: 768px) {
-            .gallery {
-                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            }
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s;
-        }
-
-        .card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-image {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            display: block;
-            cursor: pointer;
-            background: #f0f0f0;
-        }
-
-        .card-info {
-            padding: 12px;
-        }
-
-        .card-name {
-            font-size: 12px;
-            color: #333;
-            margin-bottom: 5px;
-            word-break: break-word;
-            font-weight: 600;
-        }
-
-        .card-size {
-            font-size: 11px;
-            color: #999;
-            margin-bottom: 8px;
-        }
-
-        .card-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-small {
-            flex: 1;
-            padding: 6px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-
-        .btn-download {
-            background: #51cf66;
-            color: white;
-        }
-
-        .btn-download:hover {
-            background: #37b24d;
-            transform: scale(1.05);
-        }
-
-        .btn-delete {
-            background: #ff6b6b;
-            color: white;
-        }
-
-        .btn-delete:hover:not(:disabled) {
-            background: #ff5252;
-            transform: scale(1.05);
-        }
-
-        .btn-delete:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .empty {
-            text-align: center;
-            padding: 60px 30px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        }
-
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-
-        .empty h2 {
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .empty p {
-            color: #999;
-            font-size: 14px;
-        }
-
-        .loading-gallery {
-            text-align: center;
-            padding: 40px;
-            color: #667eea;
-        }
-
-        .spinner {
-            border: 4px solid #f0f0f0;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-img {
-            max-width: 90vw;
-            max-height: 90vh;
-            border-radius: 10px;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 24px;
-        }
-
-        .modal-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
+        body { font-family: Arial; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .upload-box { background: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 30px; }
+        input[type="file"] { padding: 10px; border: 2px dashed #ccc; border-radius: 8px; }
+        button { background: #1877f2; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card img, .card video { width: 100%; height: 250px; object-fit: cover; }
+        .card video { object-fit: contain; background: #000; }
+        .empty { text-align: center; color: #888; padding: 40px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📸 Public Foto Gallery</h1>
-            <p>Upload foto & semua orang bisa lihat dari device apapun!</p>
-        </div>
-
-        <div class="upload-section">
-            <div id="status" class="status status-loading">⏳ Connecting to cloud...</div>
-            <div id="msgSuccess" class="msg msg-success"></div>
-            <div id="msgError" class="msg msg-error"></div>
-
-            <div class="upload-area" id="uploadArea">
-                <h3>📤 Upload Foto</h3>
-                <p>Drag & drop atau klik untuk pilih</p>
-                <input type="file" id="fileInput" accept="image/*" multiple>
-            </div>
-
-            <div class="controls">
-                <input 
-                    type="text" 
-                    id="search" 
-                    class="search-box" 
-                    placeholder="🔍 Cari foto..."
-                >
-                <button class="btn btn-filter active" onclick="filter('all')">Semua</button>
-                <button class="btn btn-filter" onclick="filter('recent')">Terbaru</button>
-            </div>
-
-            <div class="stats">
-                <span id="stats">Loading...</span>
-            </div>
-        </div>
-
-        <div id="gallery"></div>
+<div class="container">
+    <div class="upload-box">
+        <h2>📤 Upload Foto / Video</h2>
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.mp4,.mov">
+        <br><button onclick="uploadFile()">Upload ke Publik</button>
     </div>
 
-    <div class="modal" id="modal">
-        <button class="modal-close" onclick="closeModal()">✕</button>
-        <img id="modalImg" class="modal-img">
-    </div>
+    <div class="grid" id="gallery"></div>
+</div>
 
-    <script>
-        const SUPABASE_URL = 'https://rpddhnqytftypugowmdv.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_uTlGRJ0nfPC5Thaa73JAlg_pbzQeIKh';
-        const BUCKET = 'gallery';
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
-        let supabase = null;
-        let userId = localStorage.getItem('userId') || 'user_' + Date.now();
-        let allPhotos = [];
-        let currentFilter = 'all';
+<script>
+    // 🔥 GANTI DENGAN KONFIGURASI FIREBASE KAMU
+    const firebaseConfig = {
+        apiKey: "AIzaSy...",
+        authDomain: "project-id.firebaseapp.com",
+        projectId: "project-id",
+        storageBucket: "project-id.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abcdef"
+    };
 
-        // Init Supabase
-        async function init() {
-            try {
-                const { createClient } = window.supabase;
-                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-                localStorage.setItem('userId', userId);
-                
-                updateStatus('Connected!', 'connected');
-                setupListeners();
-                loadPhotos();
-            } catch (err) {
-                updateStatus('Error: ' + err.message, 'error');
-                console.error(err);
-            }
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    const gallery = document.getElementById('gallery');
+
+    // Upload file
+    async function uploadFile() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return alert('Pilih file dulu!');
+        
+        const storageRef = storage.ref('uploads/' + Date.now() + '_' + file.name);
+        await storageRef.put(file);
+        alert('Upload berhasil!');
+        loadGallery();
+    }
+
+    // Load gallery
+    async function loadGallery() {
+        gallery.innerHTML = '<div class="empty">Loading...</div>';
+        const listRef = storage.ref('uploads/');
+        const res = await listRef.listAll();
+        
+        if (res.items.length === 0) {
+            gallery.innerHTML = '<div class="empty">Belum ada upload. Jadilah yang pertama! 🎉</div>';
+            return;
         }
 
-        function updateStatus(msg, type) {
-            const el = document.getElementById('status');
-            el.textContent = msg;
-            el.className = 'status status-' + type;
+        gallery.innerHTML = '';
+        for (const item of res.items) {
+            const url = await item.getDownloadURL();
+            const ext = item.name.split('.').pop().toLowerCase();
+            const isVideo = ['mp4', 'mov', 'avi', 'webm'].includes(ext);
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = isVideo ? 
+                `<video controls src="${url}" style="width:100%;height:250px;background:#000;"></video>` :
+                `<img src="${url}" style="width:100%;height:250px;object-fit:cover;">`;
+            gallery.appendChild(card);
         }
+    }
 
-        // Setup drag & drop
-        function setupListeners() {
-            const uploadArea = document.getElementById('uploadArea');
-            const fileInput = document.getElementById('fileInput');
-
-            uploadArea.addEventListener('click', () => fileInput.click());
-
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragging');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragging');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragging');
-                handleFiles(Array.from(e.dataTransfer.files));
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(Array.from(e.target.files));
-                e.target.value = '';
-            });
-
-            document.getElementById('search').addEventListener('input', render);
-        }
-
-        // Handle files
-        async function handleFiles(files) {
-            for (const file of files) {
-                if (file.size > 20 * 1024 * 1024) {
-                    showError(`${file.name} terlalu besar (max 20MB)`);
-                    continue;
-                }
-
-                if (!file.type.startsWith('image/')) {
-                    showError(`${file.name} bukan foto!`);
-                    continue;
-                }
-
-                await uploadFile(file);
-            }
-        }
-
-        // Upload file
-        async function uploadFile(file) {
-            try {
-                const fileName = `${userId}/${Date.now()}_${file.name}`;
-                
-                const { data, error } = await supabase.storage
-                    .from(BUCKET)
-                    .upload(fileName, file);
-
-                if (error) throw error;
-
-                showSuccess(`✅ ${file.name} uploaded!`);
-                setTimeout(() => loadPhotos(), 500);
-            } catch (err) {
-                console.error(err);
-                showError(`Upload error: ${err.message}`);
-            }
-        }
-
-        // Load photos
-        async function loadPhotos() {
-            try {
-                const gallery = document.getElementById('gallery');
-                gallery.innerHTML = '<div class="loading-gallery"><div class="spinner"></div>Loading photos...</div>';
-
-                const { data, error } = await supabase.storage
-                    .from(BUCKET)
-                    .list('', { limit: 1000 });
-
-                if (error) throw error;
-
-                allPhotos = [];
-
-                for (const file of data) {
-                    if (file.name === '.emptyFolderPlaceholder') continue;
-
-                    const { data: { publicUrl } } = supabase.storage
-                        .from(BUCKET)
-                        .getPublicUrl(file.name);
-
-                    allPhotos.push({
-                        id: file.id,
-                        name: file.name.split('/').pop(),
-                        path: file.name,
-                        url: publicUrl,
-                        size: (file.metadata.size / 1024 / 1024).toFixed(2),
-                        date: new Date(file.created_at).toLocaleDateString('id-ID'),
-                        userId: file.name.split('/')[0]
-                    });
-                }
-
-                render();
-            } catch (err) {
-                console.error(err);
-                showError(`Load error: ${err.message}`);
-            }
-        }
-
-        // Render
-        function render() {
-            let photos = [...allPhotos];
-
-            if (currentFilter === 'recent') {
-                photos = photos.slice(-8);
-            }
-
-            const search = document.getElementById('search').value.toLowerCase();
-            if (search) {
-                photos = photos.filter(p => p.name.toLowerCase().includes(search));
-            }
-
-            const gallery = document.getElementById('gallery');
-
-            if (photos.length === 0) {
-                gallery.innerHTML = `
-                    <div class="empty">
-                        <div class="empty-icon">📸</div>
-                        <h2>No photos yet</h2>
-                        <p>Upload foto pertama kamu sekarang!</p>
-                    </div>
-                `;
-                updateStats();
-                return;
-            }
-
-            gallery.innerHTML = `
-                <div class="gallery">
-                    ${photos.map(p => `
-                        <div class="card">
-                            <img src="${p.url}" class="card-image" onclick="openModal('${p.url}')">
-                            <div class="card-info">
-                                <div class="card-name" title="${p.name}">${p.name}</div>
-                                <div class="card-size">📦 ${p.size} MB</div>
-                                <div class="card-actions">
-                                    <button class="btn-small btn-download" onclick="download('${p.url}', '${p.name}')">⬇️</button>
-                                    <button class="btn-small btn-delete" ${p.userId !== userId ? 'disabled' : ''} onclick="deletePhoto('${p.path}')">🗑️</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            updateStats();
-        }
-
-        // Filter
-        function filter(type) {
-            currentFilter = type;
-            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            render();
-        }
-
-        // Download
-        function download(url, name) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = name;
-            link.click();
-        }
-
-        // Delete
-        async function deletePhoto(path) {
-            if (!confirm('Delete this photo?')) return;
-
-            try {
-                const { error } = await supabase.storage
-                    .from(BUCKET)
-                    .remove([path]);
-
-                if (error) throw error;
-
-                showSuccess('✅ Photo deleted!');
-                loadPhotos();
-            } catch (err) {
-                console.error(err);
-                showError(`Delete error: ${err.message}`);
-            }
-        }
-
-        // Stats
-        function updateStats() {
-            const total = allPhotos.length;
-            const size = allPhotos.reduce((sum, p) => sum + parseFloat(p.size), 0).toFixed(2);
-            document.getElementById('stats').textContent = `📊 ${total} photos | 📦 ${size} MB`;
-        }
-
-        // Modal
-        function openModal(url) {
-            document.getElementById('modalImg').src = url;
-            document.getElementById('modal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('modal').classList.remove('active');
-        }
-
-        document.getElementById('modal').addEventListener('click', (e) => {
-            if (e.target.id === 'modal') closeModal();
-        });
-
-        // Messages
-        function showSuccess(msg) {
-            const el = document.getElementById('msgSuccess');
-            el.textContent = msg;
-            el.classList.add('show');
-            setTimeout(() => el.classList.remove('show'), 3000);
-        }
-
-        function showError(msg) {
-            const el = document.getElementById('msgError');
-            el.textContent = '❌ ' + msg;
-            el.classList.add('show');
-            setTimeout(() => el.classList.remove('show'), 4000);
-        }
-
-        // Auto refresh
-        setInterval(loadPhotos, 20000);
-
-        // Start
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
+    loadGallery();
+</script>
 </body>
 </html>
