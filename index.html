@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Upload Simpel</title>
+    <title>Upload Public</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
@@ -12,78 +12,99 @@
         #preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 20px; }
         #preview img, #preview video { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
         .empty { color: #888; padding: 20px; }
-        .delete-btn { margin-top: 5px; background: #e74c3c; padding: 5px 10px; font-size: 12px; }
+        .loading { color: #888; padding: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📤 Upload Foto / Video</h2>
+    <h2>📤 Upload Foto / Video (Public)</h2>
     <div class="upload-box">
         <input type="file" id="fileInput" accept="image/*,video/*">
         <br><button onclick="uploadFile()">Upload</button>
+        <br><small>Max 10MB</small>
     </div>
 
     <div id="preview"></div>
 </div>
 
 <script>
-    // Tampilkan file yang udah tersimpan di browser
+    // 🔥 CLOUD NAME SUDAH DIISI DENGAN PUNYA KAMU
+    const CLOUD_NAME = "mbaqppp"; 
+    const UPLOAD_PRESET = "ml_default";
+
+    // Data disimpan di LocalStorage (agar orang yang sama bisa liat riwayat uploadnya)
+    let fileLinks = JSON.parse(localStorage.getItem('publicCloudGallery')) || [];
+
     window.onload = function() {
-        const files = JSON.parse(localStorage.getItem('myGallery') || '[]');
-        if (files.length === 0) {
-            document.getElementById('preview').innerHTML = '<div class="empty">Belum ada file. Upload sekarang!</div>';
-        } else {
-            renderGallery(files);
-        }
+        renderGallery();
     };
 
-    function uploadFile() {
+    async function uploadFile() {
         const input = document.getElementById('fileInput');
         const file = input.files[0];
         if (!file) return alert("Pilih file dulu!");
 
-        // Max 10MB biar gak lemot di browser
         if (file.size > 10 * 1024 * 1024) return alert("File terlalu besar! Max 10MB.");
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = e.target.result;
-            // Simpan ke localStorage
-            let files = JSON.parse(localStorage.getItem('myGallery') || '[]');
-            files.push({ name: file.name, data: data, type: file.type });
-            localStorage.setItem('myGallery', JSON.stringify(files));
-            
-            input.value = '';
-            renderGallery(files);
-        };
-        reader.readAsDataURL(file);
+        const btn = document.querySelector('button');
+        const originalText = btn.innerText;
+        btn.innerText = "Uploading...";
+        btn.disabled = true;
+
+        try {
+            // Upload ke Cloudinary
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", UPLOAD_PRESET);
+
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (data.secure_url) {
+                const isVideo = file.type.startsWith('video');
+                fileLinks.push({
+                    url: data.secure_url,
+                    type: isVideo ? 'video' : 'image'
+                });
+                localStorage.setItem('publicCloudGallery', JSON.stringify(fileLinks));
+                renderGallery();
+                input.value = '';
+                alert("✅ Upload berhasil! File tersimpan di Cloud.");
+            } else {
+                alert("Gagal upload: " + (data.error?.message || "Unknown error"));
+            }
+        } catch (e) {
+            alert("Error: " + e.message);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
     }
 
-    function renderGallery(files) {
+    function renderGallery() {
         const container = document.getElementById('preview');
         container.innerHTML = '';
         
-        files.forEach((item, index) => {
+        if (fileLinks.length === 0) {
+            container.innerHTML = '<div class="empty">Belum ada upload. Ayo upload sekarang!</div>';
+            return;
+        }
+
+        fileLinks.forEach((item) => {
             const div = document.createElement('div');
-            if (item.type.startsWith('video')) {
-                div.innerHTML = `<video src="${item.data}" controls></video>`;
+            if (item.type === 'video') {
+                div.innerHTML = `<video src="${item.url}" controls></video>`;
             } else {
-                div.innerHTML = `<img src="${item.data}">`;
+                div.innerHTML = `<img src="${item.url}">`;
             }
-            div.innerHTML += `<br><button class="delete-btn" onclick="deleteFile(${index})">Hapus</button>`;
             container.appendChild(div);
         });
     }
-
-    function deleteFile(index) {
-        if (!confirm("Hapus file ini?")) return;
-        let files = JSON.parse(localStorage.getItem('myGallery') || '[]');
-        files.splice(index, 1);
-        localStorage.setItem('myGallery', JSON.stringify(files));
-        renderGallery(files);
-    }
 </script>
-
 </body>
 </html>
