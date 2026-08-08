@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Foto Gallery - Simpan & Kelola Foto Kamu">
+    <meta name="description" content="Public Foto Gallery - Share dengan semua orang">
     <meta name="theme-color" content="#667eea">
-    <title>📸 Foto Gallery - Simpen Foto Kamu</title>
+    <title>📸 Public Foto Gallery</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -21,7 +22,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -77,65 +78,92 @@
             }
         }
 
-        .upload-container {
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f9f9f9;
+        }
+
+        .upload-area:hover {
+            background: #f0f0f0;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragging {
+            background: #e8e8ff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-area-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-area h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .upload-area p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .controls {
             display: flex;
             gap: 15px;
+            margin-top: 20px;
             flex-wrap: wrap;
-            align-items: center;
             justify-content: center;
         }
 
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
+        .control-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-size: 14px;
         }
 
-        .file-input-wrapper input[type="file"] {
-            position: absolute;
-            left: -9999px;
+        .filter-btn {
+            background: #f0f0f0;
+            color: #333;
         }
 
-        .file-input-label {
-            display: inline-block;
+        .filter-btn.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 14px 28px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
-        .file-input-label:hover {
+        .filter-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .file-input-label:active {
-            transform: translateY(0);
-        }
-
-        .clear-all-btn {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 700;
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
         }
 
-        .clear-all-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
-        }
-
-        .clear-all-btn:active {
-            transform: translateY(0);
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
         }
 
         .stats {
@@ -155,12 +183,8 @@
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         @media (max-width: 768px) {
@@ -168,15 +192,22 @@
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
                 gap: 15px;
             }
+            .controls {
+                flex-direction: column;
+            }
+            .search-box {
+                min-width: 100%;
+            }
         }
 
-        .photo-card {
+        .media-card {
             background: white;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             animation: slideIn 0.3s ease;
+            position: relative;
         }
 
         @keyframes slideIn {
@@ -190,52 +221,112 @@
             }
         }
 
-        .photo-card:hover {
+        .media-card:hover {
             transform: translateY(-8px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
         }
 
-        .photo-image {
+        .media-container {
             width: 100%;
             height: 200px;
-            object-fit: cover;
-            display: block;
             background: #f0f0f0;
+            position: relative;
+            overflow: hidden;
         }
 
-        .photo-info {
+        .media-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            cursor: pointer;
+        }
+
+        .video-badge {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .favorite-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .favorite-btn.favorited {
+            background: #ffd700;
+        }
+
+        .media-info {
             padding: 15px;
             background: white;
         }
 
-        .photo-date {
+        .media-name {
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 5px;
+            word-break: break-word;
+            font-weight: 600;
+        }
+
+        .media-meta {
             font-size: 12px;
             color: #999;
             margin-bottom: 10px;
         }
 
-        .photo-size {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 12px;
-        }
-
-        .photo-actions {
+        .media-actions {
             display: flex;
             gap: 8px;
         }
 
-        .delete-btn {
+        .action-btn {
             flex: 1;
-            background: #ff6b6b;
-            color: white;
             border: none;
             padding: 8px 12px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             transition: all 0.2s ease;
+        }
+
+        .download-btn {
+            background: #51cf66;
+            color: white;
+        }
+
+        .download-btn:hover {
+            background: #37b24d;
+            transform: scale(1.05);
+        }
+
+        .delete-btn {
+            background: #ff6b6b;
+            color: white;
         }
 
         .delete-btn:hover {
@@ -243,22 +334,10 @@
             transform: scale(1.05);
         }
 
-        .download-btn {
-            flex: 1;
-            background: #51cf66;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 700;
-            transition: all 0.2s ease;
-        }
-
-        .download-btn:hover {
-            background: #37b24d;
-            transform: scale(1.05);
+        .delete-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .empty-state {
@@ -286,6 +365,55 @@
             font-size: 15px;
         }
 
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: pulse 1.2s infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .upload-progress {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        .upload-progress.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -293,7 +421,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 1000;
             justify-content: center;
             align-items: center;
@@ -305,57 +433,42 @@
         }
 
         .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
             background: white;
-            padding: 30px;
-            border-radius: 20px;
-            text-align: center;
-            max-width: 400px;
+            border-radius: 15px;
+            overflow: hidden;
             animation: slideUp 0.3s ease;
+            position: relative;
         }
 
-        .modal-content h2 {
-            color: #333;
-            margin-bottom: 15px;
+        .modal-media {
+            max-width: 100%;
+            max-height: calc(90vh - 60px);
+            display: block;
+            margin: auto;
         }
 
-        .modal-content p {
-            color: #666;
-            margin-bottom: 20px;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .modal-btn {
-            padding: 10px 25px;
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
             border: none;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             cursor: pointer;
-            font-weight: 700;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.2s ease;
         }
 
-        .modal-btn-confirm {
-            background: #ff6b6b;
-            color: white;
-        }
-
-        .modal-btn-confirm:hover {
-            background: #ff5252;
-            transform: scale(1.05);
-        }
-
-        .modal-btn-cancel {
-            background: #eee;
-            color: #333;
-        }
-
-        .modal-btn-cancel:hover {
-            background: #ddd;
-            transform: scale(1.05);
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.8);
         }
 
         .error-msg {
@@ -363,7 +476,7 @@
             color: #ff6b6b;
             padding: 12px 15px;
             border-radius: 8px;
-            margin-top: 15px;
+            margin-bottom: 15px;
             display: none;
         }
 
@@ -371,144 +484,255 @@
             display: block;
         }
 
-        .loading {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #667eea;
-            border-radius: 50%;
-            animation: pulse 1.2s infinite;
+        .success-msg {
+            background: #e8f8f0;
+            color: #51cf66;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .success-msg.show {
+            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Foto Gallery</h1>
-            <p>Simpan & kelola foto kamu dengan mudah</p>
+            <h1>📸 Public Foto Gallery</h1>
+            <p>Upload foto & video, semua orang bisa lihat dari mana saja!</p>
         </div>
 
         <div class="upload-section">
-            <div class="upload-container">
-                <div class="file-input-wrapper">
-                    <input 
-                        type="file" 
-                        id="photoInput" 
-                        accept="image/*"
-                        multiple
-                    >
-                    <label for="photoInput" class="file-input-label">
-                        ➕ Upload Foto
-                    </label>
-                </div>
-                <button class="clear-all-btn" onclick="clearAllPhotos()">🗑️ Hapus Semua</button>
+            <div id="errorMsg" class="error-msg"></div>
+            <div id="successMsg" class="success-msg"></div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-area-icon">📤</div>
+                <h3>Upload Foto atau Video</h3>
+                <p>Drag & drop atau klik untuk pilih file</p>
+                <input type="file" id="fileInput" accept="image/*,video/*" multiple>
             </div>
-            <div class="error-msg" id="errorMsg"></div>
+
+            <div id="uploadProgress" class="upload-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressText">0%</span> - <span id="fileName">Uploading...</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <input 
+                    type="text" 
+                    id="searchBox" 
+                    class="search-box" 
+                    placeholder="🔍 Cari foto/video..."
+                >
+                <button class="control-btn filter-btn active" onclick="filterMedia('all')">Semua</button>
+                <button class="control-btn filter-btn" onclick="filterMedia('image')">📸 Foto</button>
+                <button class="control-btn filter-btn" onclick="filterMedia('video')">🎥 Video</button>
+                <button class="control-btn filter-btn" onclick="filterMedia('favorite')">⭐ Favorit</button>
+            </div>
+
             <div class="stats">
-                Total foto: <strong id="photoCount">0</strong> | Storage: <strong id="storageUsed">0 KB</strong>
+                Total: <strong id="mediaCount">0</strong> | Storage: <strong id="storageUsed">0 MB</strong>
             </div>
         </div>
 
         <div id="galleryContainer"></div>
     </div>
 
-    <div class="modal" id="confirmModal">
+    <div class="modal" id="mediaModal">
         <div class="modal-content">
-            <h2>Konfirmasi</h2>
-            <p id="confirmText"></p>
-            <div class="modal-buttons">
-                <button class="modal-btn modal-btn-confirm" onclick="confirmDelete()">Hapus</button>
-                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Batal</button>
-            </div>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <img id="modalMedia" class="modal-media">
         </div>
     </div>
 
     <script>
-        const STORAGE_KEY = 'photoGallery';
-        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-        let deleteTargetId = null;
+        // Supabase Setup
+        const SUPABASE_URL = 'https://rpddhnqytftypugowmdv.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_uTlGRJ0nfPC5Thaa73JAlg_pbzQeIKh';
+        const { createClient } = window.supabase;
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Load photos saat halaman dibuka
-        function loadPhotos() {
-            const photos = getPhotos();
-            renderGallery(photos);
-            updateStats();
+        const BUCKET_NAME = 'gallery';
+        let currentFilter = 'all';
+        let searchTerm = '';
+        let allMedia = [];
+
+        // Get user ID (simple, stored in localStorage)
+        function getUserId() {
+            let userId = localStorage.getItem('userId');
+            if (!userId) {
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userId', userId);
+            }
+            return userId;
         }
 
-        // Ambil semua foto dari localStorage
-        function getPhotos() {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            return stored ? JSON.parse(stored) : [];
-        }
+        const userId = getUserId();
 
-        // Simpan foto ke localStorage
-        function savePhotos(photos) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
-            updateStats();
-        }
+        // Upload Area Drag & Drop
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
 
-        // Handle upload foto
-        document.getElementById('photoInput').addEventListener('change', function(e) {
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragging');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragging');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragging');
+            const files = Array.from(e.dataTransfer.files);
+            handleFileUpload(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
-            const errorMsg = document.getElementById('errorMsg');
-            errorMsg.classList.remove('show');
-
-            if (files.length === 0) return;
-
-            const photos = getPhotos();
-
-            files.forEach(file => {
-                if (file.size > MAX_FILE_SIZE) {
-                    showError(`${file.name} terlalu besar! Max 5MB`);
-                    return;
-                }
-
-                if (!file.type.startsWith('image/')) {
-                    showError(`${file.name} bukan gambar!`);
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    photos.push({
-                        id: Date.now() + Math.random(),
-                        src: e.target.result,
-                        name: file.name,
-                        size: (file.size / 1024).toFixed(2),
-                        date: new Date().toLocaleDateString('id-ID', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })
-                    });
-                    savePhotos(photos);
-                    renderGallery(photos);
-                };
-                reader.readAsDataURL(file);
-            });
-
-            // Reset input
+            handleFileUpload(files);
             e.target.value = '';
         });
 
-        // Render gallery
-        function renderGallery(photos) {
+        // Handle File Upload
+        async function handleFileUpload(files) {
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+
+            for (const file of files) {
+                // Validasi
+                if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+                    showError(`${file.name} bukan foto/video!`);
+                    continue;
+                }
+
+                if (file.size > 100 * 1024 * 1024) { // 100MB limit
+                    showError(`${file.name} terlalu besar! Max 100MB`);
+                    continue;
+                }
+
+                await uploadFile(file);
+            }
+        }
+
+        // Upload File ke Supabase
+        async function uploadFile(file) {
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const fileName = document.getElementById('fileName');
+
+            progressDiv.classList.add('show');
+            fileName.textContent = file.name;
+
+            const fileNameWithId = `${userId}/${Date.now()}_${file.name}`;
+
+            try {
+                const { data, error } = await supabase.storage
+                    .from(BUCKET_NAME)
+                    .upload(fileNameWithId, file);
+
+                if (error) throw error;
+
+                progressFill.style.width = '100%';
+                progressText.textContent = '100%';
+
+                setTimeout(() => {
+                    progressDiv.classList.remove('show');
+                    showSuccess(`${file.name} berhasil upload!`);
+                    loadMedia();
+                }, 500);
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                showError(`Gagal upload ${file.name}`);
+                progressDiv.classList.remove('show');
+            }
+        }
+
+        // Load Media dari Supabase
+        async function loadMedia() {
+            try {
+                const { data, error } = await supabase.storage
+                    .from(BUCKET_NAME)
+                    .list('', { limit: 1000, offset: 0 });
+
+                if (error) throw error;
+
+                allMedia = [];
+
+                for (const file of data) {
+                    if (file.id === '.emptyFolderPlaceholder') continue;
+
+                    const { data: publicData } = supabase.storage
+                        .from(BUCKET_NAME)
+                        .getPublicUrl(file.name);
+
+                    const isVideo = file.name.toLowerCase().match(/\.(mp4|webm|mov|avi)$/i);
+                    const isFavorite = localStorage.getItem(`fav_${file.id}`) === 'true';
+
+                    allMedia.push({
+                        id: file.id,
+                        name: file.name.split('/').pop(),
+                        path: file.name,
+                        url: publicData.publicUrl,
+                        size: (file.metadata.size / 1024 / 1024).toFixed(2),
+                        uploadedAt: new Date(file.created_at).toLocaleDateString('id-ID'),
+                        type: isVideo ? 'video' : 'image',
+                        userId: file.name.split('/')[0],
+                        isFavorite: isFavorite
+                    });
+                }
+
+                renderGallery();
+                updateStats();
+
+            } catch (error) {
+                console.error('Load error:', error);
+            }
+        }
+
+        // Render Gallery
+        function renderGallery() {
+            let filtered = allMedia;
+
+            // Filter by type
+            if (currentFilter === 'image') {
+                filtered = filtered.filter(m => m.type === 'image');
+            } else if (currentFilter === 'video') {
+                filtered = filtered.filter(m => m.type === 'video');
+            } else if (currentFilter === 'favorite') {
+                filtered = filtered.filter(m => m.isFavorite);
+            }
+
+            // Filter by search
+            if (searchTerm) {
+                filtered = filtered.filter(m => 
+                    m.name.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+
             const container = document.getElementById('galleryContainer');
 
-            if (photos.length === 0) {
+            if (filtered.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">📸</div>
-                        <h2>Belum ada foto</h2>
-                        <p>Upload foto pertama kamu sekarang!</p>
+                        <div class="empty-state-icon">${currentFilter === 'favorite' ? '⭐' : '📸'}</div>
+                        <h2>Tidak ada ${currentFilter === 'image' ? 'foto' : currentFilter === 'video' ? 'video' : 'media'}</h2>
+                        <p>Upload sesuatu untuk mulai!</p>
                     </div>
                 `;
                 return;
@@ -516,15 +740,24 @@
 
             container.innerHTML = `
                 <div class="gallery">
-                    ${photos.map(photo => `
-                        <div class="photo-card">
-                            <img src="${photo.src}" alt="${photo.name}" class="photo-image" onclick="openModal('${photo.src}')">
-                            <div class="photo-info">
-                                <div class="photo-date">${photo.date}</div>
-                                <div class="photo-size">📦 ${photo.size} KB</div>
-                                <div class="photo-actions">
-                                    <button class="download-btn" onclick="downloadPhoto('${photo.src}', '${photo.name}')">⬇️ Download</button>
-                                    <button class="delete-btn" onclick="showDeleteConfirm('${photo.id}')">🗑️ Hapus</button>
+                    ${filtered.map(media => `
+                        <div class="media-card">
+                            <div class="media-container">
+                                ${media.type === 'image' 
+                                    ? `<img src="${media.url}" alt="${media.name}" class="media-image" onclick="openModal('${media.url}', '${media.type}')">`
+                                    : `<video src="${media.url}" class="media-image" onclick="openModal('${media.url}', '${media.type}')" controls></video>`
+                                }
+                                ${media.type === 'video' ? `<div class="video-badge">🎥 Video</div>` : ''}
+                                <button class="favorite-btn ${media.isFavorite ? 'favorited' : ''}" onclick="toggleFavorite('${media.id}', ${media.isFavorite})">
+                                    ${media.isFavorite ? '⭐' : '☆'}
+                                </button>
+                            </div>
+                            <div class="media-info">
+                                <div class="media-name" title="${media.name}">${media.name}</div>
+                                <div class="media-meta">📦 ${media.size} MB | 📅 ${media.uploadedAt}</div>
+                                <div class="media-actions">
+                                    <button class="action-btn download-btn" onclick="downloadMedia('${media.url}', '${media.name}')">⬇️ Download</button>
+                                    <button class="action-btn delete-btn" ${media.userId !== userId ? 'disabled' : ''} onclick="deleteMedia('${media.path}', '${media.id}')" title="${media.userId !== userId ? 'Hanya pemilik bisa hapus' : ''}">🗑️ Hapus</button>
                                 </div>
                             </div>
                         </div>
@@ -533,73 +766,82 @@
             `;
         }
 
-        // Download photo
-        function downloadPhoto(src, filename) {
+        // Filter Media
+        function filterMedia(type) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderGallery();
+        }
+
+        // Search
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            searchTerm = e.target.value;
+            renderGallery();
+        });
+
+        // Download Media
+        function downloadMedia(url, filename) {
             const link = document.createElement('a');
-            link.href = src;
+            link.href = url;
             link.download = filename;
             link.click();
         }
 
-        // Show delete confirmation
-        function showDeleteConfirm(id) {
-            deleteTargetId = id;
-            document.getElementById('confirmText').textContent = 'Hapus foto ini? Tidak bisa di-restore.';
-            document.getElementById('confirmModal').classList.add('active');
+        // Toggle Favorite
+        async function toggleFavorite(fileId, isFavorite) {
+            if (isFavorite) {
+                localStorage.removeItem(`fav_${fileId}`);
+            } else {
+                localStorage.setItem(`fav_${fileId}`, 'true');
+            }
+            loadMedia();
         }
 
-        // Confirm delete
-        function confirmDelete() {
-            if (deleteTargetId) {
-                let photos = getPhotos();
-                photos = photos.filter(p => p.id != deleteTargetId);
-                savePhotos(photos);
-                renderGallery(photos);
-                closeModal();
+        // Delete Media
+        async function deleteMedia(path, fileId) {
+            if (confirm('Hapus file ini?')) {
+                try {
+                    const { error } = await supabase.storage
+                        .from(BUCKET_NAME)
+                        .remove([path]);
+
+                    if (error) throw error;
+
+                    localStorage.removeItem(`fav_${fileId}`);
+                    showSuccess('File berhasil dihapus!');
+                    loadMedia();
+
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    showError('Gagal menghapus file');
+                }
             }
         }
 
-        // Close modal
+        // Modal
+        function openModal(url, type) {
+            const modal = document.getElementById('mediaModal');
+            const modalMedia = document.getElementById('modalMedia');
+            
+            if (type === 'video') {
+                modalMedia.outerHTML = `<video id="modalMedia" class="modal-media" src="${url}" controls></video>`;
+            } else {
+                modalMedia.outerHTML = `<img id="modalMedia" class="modal-media" src="${url}">`;
+            }
+            
+            modal.classList.add('active');
+        }
+
         function closeModal() {
-            document.getElementById('confirmModal').classList.remove('active');
-            deleteTargetId = null;
+            document.getElementById('mediaModal').classList.remove('active');
         }
 
-        // Clear all photos
-        function clearAllPhotos() {
-            deleteTargetId = 'all';
-            document.getElementById('confirmText').textContent = 'Hapus SEMUA foto? Tidak bisa di-restore!';
-            document.getElementById('confirmModal').classList.add('active');
-        }
+        document.getElementById('mediaModal').addEventListener('click', (e) => {
+            if (e.target.id === 'mediaModal') closeModal();
+        });
 
-        // Override confirmDelete untuk handle clear all
-        const originalConfirmDelete = confirmDelete;
-        window.confirmDelete = function() {
-            if (deleteTargetId === 'all') {
-                localStorage.removeItem(STORAGE_KEY);
-                renderGallery([]);
-                closeModal();
-            } else {
-                originalConfirmDelete();
-            }
-        };
-
-        // Update stats
-        function updateStats() {
-            const photos = getPhotos();
-            document.getElementById('photoCount').textContent = photos.length;
-            
-            let totalSize = 0;
-            photos.forEach(p => totalSize += parseFloat(p.size));
-            
-            if (totalSize > 1024) {
-                document.getElementById('storageUsed').textContent = (totalSize / 1024).toFixed(2) + ' MB';
-            } else {
-                document.getElementById('storageUsed').textContent = totalSize.toFixed(2) + ' KB';
-            }
-        }
-
-        // Show error message
+        // Messages
         function showError(msg) {
             const errorMsg = document.getElementById('errorMsg');
             errorMsg.textContent = '❌ ' + msg;
@@ -607,13 +849,25 @@
             setTimeout(() => errorMsg.classList.remove('show'), 4000);
         }
 
-        // Modal close on background click
-        document.getElementById('confirmModal').addEventListener('click', function(e) {
-            if (e.target === this) closeModal();
-        });
+        function showSuccess(msg) {
+            const successMsg = document.getElementById('successMsg');
+            successMsg.textContent = '✅ ' + msg;
+            successMsg.classList.add('show');
+            setTimeout(() => successMsg.classList.remove('show'), 3000);
+        }
 
-        // Load photos saat halaman dibuka
-        window.addEventListener('DOMContentLoaded', loadPhotos);
+        // Update Stats
+        function updateStats() {
+            document.getElementById('mediaCount').textContent = allMedia.length;
+            const totalSize = allMedia.reduce((sum, m) => sum + parseFloat(m.size), 0);
+            document.getElementById('storageUsed').textContent = totalSize.toFixed(2) + ' MB';
+        }
+
+        // Load media on start
+        window.addEventListener('DOMContentLoaded', loadMedia);
+
+        // Auto refresh setiap 10 detik (real-time sync)
+        setInterval(loadMedia, 10000);
     </script>
 </body>
 </html>
